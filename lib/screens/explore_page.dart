@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../services/gemini_service.dart';
 
+/// Halaman Jelajah: AI scanner dan daftar materi edukasi berkebun.
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
 
@@ -12,83 +13,141 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> {
-
   final ImagePicker _picker = ImagePicker();
 
-  // Pilih sumber foto (kamera atau galeri), ambil fotonya, lalu kirim ke AI
+  /// Memilih sumber foto (kamera atau galeri), mengambil gambar, lalu memindai.
   Future<void> _pickAndScan(ScanMode mode) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.camera_alt_outlined, color: context.accent),
-              title: Text('Ambil foto'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library_outlined, color: context.accent),
-              title: Text('Pilih dari galeri'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Garis indikator geser di atas bottom sheet
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: context.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt_outlined, color: context.accent),
+                title: Text('Ambil foto', style: TextStyle(color: context.ink)),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading:
+                    Icon(Icons.photo_library_outlined, color: context.accent),
+                title: Text('Pilih dari galeri',
+                    style: TextStyle(color: context.ink)),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
         ),
       ),
     );
-    if (source == null) return; // user menutup pilihan
+    if (source == null) return;
 
     final picked = await _picker.pickImage(
       source: source,
       maxWidth: 1024,
       imageQuality: 85,
     );
-    if (picked == null || !mounted) return; // user batal mengambil foto
+    if (picked == null || !mounted) return;
 
     _runScan(File(picked.path), mode);
   }
 
-  
-  // Memunculkan opsi pilihan scan (Identifikasi atau Diagnosis)
+  /// Menampilkan pilihan mode pemindaian: identifikasi jenis atau cek gejala.
   void _showScannerOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.all(24.0),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Mau pindai apa?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
+              // Garis indikator geser di atas modal
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 18),
+                decoration: BoxDecoration(
+                  color: context.line,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Mau pindai apa?',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: context.ink,
+                ),
+              ),
+              const SizedBox(height: 18),
               ListTile(
+                contentPadding: EdgeInsets.zero,
                 leading: Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: context.tint, shape: BoxShape.circle),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: context.tint,
+                    shape: BoxShape.circle,
+                  ),
                   child: Icon(Icons.search, color: context.accent),
                 ),
-                title: Text('Ini tanaman apa?'),
-                subtitle: Text('Kenali jenis tanaman dari daun atau buahnya'),
+                title: Text(
+                  'Ini tanaman apa?',
+                  style:
+                      TextStyle(fontWeight: FontWeight.w600, color: context.ink),
+                ),
+                subtitle: Text(
+                  'Kenali jenis tanaman dari daun atau buahnya',
+                  style: TextStyle(color: context.muted, fontSize: 13),
+                ),
                 onTap: () {
-                  Navigator.pop(context); // Tutup pop-up opsi
+                  Navigator.pop(context);
                   _pickAndScan(ScanMode.identify);
                 },
               ),
-              Divider(),
+              Divider(color: context.line),
               ListTile(
+                contentPadding: EdgeInsets.zero,
                 leading: Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
-                  child: Icon(Icons.coronavirus_outlined, color: Colors.red),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.coronavirus_outlined,
+                      color: Colors.red),
                 ),
-                title: Text('Cek gejala tanaman'),
-                subtitle: Text('Cari tahu penyebab penyakit, hama, atau kurang nutrisi'),
+                title: Text(
+                  'Cek gejala tanaman',
+                  style:
+                      TextStyle(fontWeight: FontWeight.w600, color: context.ink),
+                ),
+                subtitle: Text(
+                  'Cari tahu penyebab penyakit, hama, atau kurang nutrisi',
+                  style: TextStyle(color: context.muted, fontSize: 13),
+                ),
                 onTap: () {
-                  Navigator.pop(context); // Tutup pop-up opsi
+                  Navigator.pop(context);
                   _pickAndScan(ScanMode.diagnose);
                 },
               ),
@@ -99,7 +158,7 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  // Mengirim foto ke Gemini, menampilkan loading, lalu hasilnya
+  /// Mengirim foto ke AI dengan dialog loading lalu menampilkan hasilnya.
   Future<void> _runScan(File image, ScanMode mode) async {
     showDialog(
       context: context,
@@ -108,8 +167,8 @@ class _ExplorePageState extends State<ExplorePage> {
         content: Row(
           children: [
             CircularProgressIndicator(color: context.accent),
-            SizedBox(width: 20),
-            Expanded(child: Text('Memindai...')),
+            const SizedBox(width: 20),
+            const Expanded(child: Text('Memindai...')),
           ],
         ),
       ),
@@ -126,7 +185,7 @@ class _ExplorePageState extends State<ExplorePage> {
     }
 
     if (!mounted) return;
-    Navigator.pop(context); // tutup loading
+    Navigator.pop(context); // Tutup dialog loading
 
     if (result != null) {
       _showScanResult(mode, image, result);
@@ -137,7 +196,9 @@ class _ExplorePageState extends State<ExplorePage> {
     }
   }
 
-  Future<void> _showScanResult(ScanMode mode, File image, ScanResult result) async {
+  /// Menampilkan hasil identifikasi atau diagnosis tanaman.
+  Future<void> _showScanResult(
+      ScanMode mode, File image, ScanResult result) async {
     final sci = result.scientificName;
     final hasSci = sci != null && sci.isNotEmpty && sci != 'null';
     final pct = (result.confidence * 100).round();
@@ -145,68 +206,142 @@ class _ExplorePageState extends State<ExplorePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) {
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: context.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 Row(
                   children: [
                     Icon(Icons.auto_awesome, color: context.accent),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
-                      mode == ScanMode.identify ? 'Hasil identifikasi' : 'Hasil cek gejala',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      mode == ScanMode.identify
+                          ? 'Hasil identifikasi'
+                          : 'Hasil cek gejala',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: context.ink,
+                      ),
                     ),
                   ],
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Image.file(image, height: 200, width: double.infinity, fit: BoxFit.cover),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    image,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 if (!result.isPlant)
                   Container(
-                    padding: EdgeInsets.all(15),
-                    decoration: BoxDecoration(color: context.tint, borderRadius: BorderRadius.circular(10)),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: context.tint,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.line),
+                    ),
                     child: Text(
-                      result.summary.isEmpty ? 'Foto ini tidak terlihat seperti tanaman. Coba foto lagi.' : result.summary,
-                      style: TextStyle(height: 1.5),
+                      result.summary.isEmpty
+                          ? 'Foto ini tidak terlihat seperti tanaman. Coba foto lagi.'
+                          : result.summary,
+                      style: TextStyle(color: context.ink, height: 1.5),
                     ),
                   )
                 else ...[
-                  Text(result.title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                  Text(
+                    result.title,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: context.ink,
+                    ),
+                  ),
                   if (hasSci)
-                    Text(sci, style: TextStyle(fontStyle: FontStyle.italic, color: context.muted)),
-                  SizedBox(height: 8),
-                  Text('Tingkat keyakinan $pct%', style: TextStyle(color: context.muted, fontSize: 13)),
-                  if (result.confidence < 0.6)
-                    Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.harvest.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text('Kurang yakin. Coba foto lebih dekat, terang, dan fokus pada satu daun.'),
+                    Text(
+                      sci,
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: context.muted,
                       ),
                     ),
-                  SizedBox(height: 12),
-                  Container(
-                    padding: EdgeInsets.all(15),
-                    decoration: BoxDecoration(color: context.tint, borderRadius: BorderRadius.circular(10)),
-                    child: Text(result.summary, style: TextStyle(fontSize: 15, height: 1.5)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tingkat keyakinan $pct%',
+                    style: TextStyle(color: context.muted, fontSize: 13),
                   ),
-                  if (result.causes.isNotEmpty) _resultSection('Kemungkinan penyebab', result.causes),
+                  if (result.confidence < 0.6)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.harvest.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.harvest.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Text(
+                          'Kurang yakin. Coba foto lebih dekat, terang, dan fokus pada satu daun.',
+                          style: TextStyle(color: context.ink, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: context.tint,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.line),
+                    ),
+                    child: Text(
+                      result.summary,
+                      style: TextStyle(
+                        color: context.ink,
+                        fontSize: 15,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  if (result.causes.isNotEmpty)
+                    _resultSection('Kemungkinan penyebab', result.causes),
                   if (result.advice.isNotEmpty)
-                    _resultSection(mode == ScanMode.identify ? 'Tips perawatan' : 'Saran penanganan', result.advice),
+                    _resultSection(
+                      mode == ScanMode.identify
+                          ? 'Tips perawatan'
+                          : 'Saran penanganan',
+                      result.advice,
+                    ),
                 ],
-                SizedBox(height: 20),
+                const SizedBox(height: 22),
                 Text(
                   'Ini perkiraan dari AI, bukan pengganti penyuluh pertanian.',
                   style: TextStyle(color: context.muted, fontSize: 12),
@@ -219,23 +354,37 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
+  /// Bagian daftar poin (penyebab atau saran) pada hasil pemindaian.
   Widget _resultSection(String title, List<String> items) {
     return Padding(
-      padding: EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: context.ink,
+            ),
+          ),
+          const SizedBox(height: 10),
           for (final item in items)
             Padding(
-              padding: EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline, size: 18, color: context.accent),
-                  SizedBox(width: 8),
-                  Expanded(child: Text(item, style: TextStyle(height: 1.4))),
+                  Icon(Icons.check_circle_outline,
+                      size: 18, color: context.accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: TextStyle(color: context.ink, height: 1.4),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -246,74 +395,139 @@ class _ExplorePageState extends State<ExplorePage> {
 
   @override
   Widget build(BuildContext context) {
+    final pageBg = context.isDark ? context.bg : Colors.white;
+
     return Scaffold(
-      backgroundColor: context.bg,
+      backgroundColor: pageBg,
       appBar: AppBar(
-                elevation: 0,
-        title: Text('Jelajah'),
+        elevation: 0,
+        title: const Text('Jelajah'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20.0),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 48),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- HEADER: SCANNER AI ---
+            // Bagian atas: AI scanner
             Container(
-              padding: EdgeInsets.all(24),
+              width: double.infinity,
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 10, offset: Offset(0, 5))],
+                boxShadow: context.isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.22),
+                          blurRadius: 12,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text('Pemindai tanaman', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 10),
-                  Text(
-                    'Arahkan kamera ke daun atau buah untuk mengenali tanaman dan mengecek penyakit atau hama.',
-                    style: TextStyle(color: Colors.white70),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pemindai tanaman',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Arahkan kamera ke daun atau buah untuk mengenali tanaman dan mengecek penyakit atau hama.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showScannerOptions(context),
+                            icon: Icon(Icons.camera_alt_outlined,
+                                color: context.accent),
+                            label: Text(
+                              'Buka kamera',
+                              style: TextStyle(
+                                color: context.accent,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.surface,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showScannerOptions(context),
-                      icon: Icon(Icons.camera_alt, color: context.accent),
-                      label: Text('Buka kamera', style: TextStyle(color: context.accent, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: context.surface,
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  const SizedBox(width: 14),
+                  // Bingkai visual pemindai di sisi kanan kartu header
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
                       ),
+                    ),
+                    child: const Icon(
+                      Icons.center_focus_strong_rounded,
+                      color: Colors.white,
+                      size: 34,
                     ),
                   ),
                 ],
               ),
             ),
-            
-            SizedBox(height: 35),
-            
-            // --- DAFTAR MATERI EDUKASI ---
-            Text('Belajar berkebun', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 15),
-            
+
+            const SizedBox(height: 30),
+
+            // Bagian bawha: daftar materi edukasi
+            Text(
+              'Belajar berkebun',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: context.ink,
+              ),
+            ),
+            const SizedBox(height: 14),
+
             _buildArticleCard(
-              icon: Icons.article_outlined,
+              icon: Icons.eco_outlined,
               title: 'Menanam sayur di rumah',
               subtitle: 'Dari menyiapkan media tanam sampai panen.',
               format: 'PDF, 5 menit baca',
               color: AppColors.primary,
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 12),
             _buildArticleCard(
-              icon: Icons.warning_amber_rounded,
+              icon: Icons.straighten_outlined,
               title: 'Mengenal etiolasi (kutilang)',
-              subtitle: 'Kenapa batang tumbuh kurus dan memanjang, dan cara mengatasinya.',
+              subtitle:
+                  'Kenapa batang tumbuh kurus dan memanjang, dan cara mengatasinya.',
               format: 'Artikel, 3 menit baca',
               color: AppColors.primary,
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 12),
             _buildArticleCard(
               icon: Icons.bug_report_outlined,
               title: 'Hama umum pada bunga',
@@ -321,7 +535,7 @@ class _ExplorePageState extends State<ExplorePage> {
               format: 'PDF, 7 menit baca',
               color: Colors.red,
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 12),
             _buildArticleCard(
               icon: Icons.water_drop_outlined,
               title: 'Hidroponik untuk pemula',
@@ -329,50 +543,102 @@ class _ExplorePageState extends State<ExplorePage> {
               format: 'Artikel, 4 menit baca',
               color: AppColors.primary,
             ),
-            
-            SizedBox(height: 50),
           ],
         ),
       ),
     );
   }
 
-  // Desain kartu materi edukasi
-  Widget _buildArticleCard({required IconData icon, required String title, required String subtitle, required String format, required Color color}) {
-    return InkWell(
-      onTap: () {
-        // Logika untuk membuka materi PDF/Artikel nanti ditaruh di sini
-      },
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.surface,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: context.line),
-          boxShadow: [BoxShadow(color: context.line, blurRadius: 5, spreadRadius: 1)],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  SizedBox(height: 5),
-                  Text(subtitle, style: TextStyle(color: context.muted, fontSize: 13)),
-                  SizedBox(height: 8),
-                  Text(format, style: TextStyle(color: context.accent, fontSize: 11, fontWeight: FontWeight.bold)),
-                ],
+  /// Kartu materi edukasi
+  Widget _buildArticleCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String format,
+    required Color color,
+  }) {
+    return Material(
+      color: context.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          // Logika membuka materi PDF/Artikel dapat ditambahkan di sini
+        },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.line),
+            boxShadow: context.isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+          ),
+          child: Row(
+            children: [
+              // Kotak visual/thumbnail materi di sebelah kiri kartu
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 28),
               ),
-            ),
-            Icon(Icons.chevron_right, color: context.muted),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: context.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: context.muted,
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Badge pil untuk informasi format & estimasi waktu baca
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: context.tint,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        format,
+                        style: TextStyle(
+                          color: context.accent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, color: context.muted),
+            ],
+          ),
         ),
       ),
     );

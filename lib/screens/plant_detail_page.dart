@@ -8,29 +8,38 @@ import '../models/plant.dart';
 import '../services/weather_service.dart';
 import '../theme/app_theme.dart';
 
-/// Halaman detail satu tanaman: status, tugas hari ini, panen,
-/// catatan, foto, dan tanaman mati.
+/// Halaman detail satu tanaman: menampilkan status tumbuh, tugas perawatan harian,
+/// peringatan cuaca, fitur panen, catatan, galeri foto, serta opsi hapus tanaman.
 class PlantDetailPage extends StatelessWidget {
   final Plant plant;
   const PlantDetailPage({super.key, required this.plant});
 
   @override
   Widget build(BuildContext context) {
+    final pageBg = context.isDark ? context.bg : Colors.white;
+
     return Scaffold(
-      appBar: AppBar(title: Text(plant.name)),
+      backgroundColor: pageBg,
+      appBar: AppBar(
+        title: Text(plant.name),
+        elevation: 0,
+      ),
+      // Mendengarkan perubahan data tanaman dan cuaca secara real-time
       body: ListenableBuilder(
         listenable: Listenable.merge([plantStore, weatherStore]),
         builder: (context, _) => ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
           children: [
-            _header(),
-            const SizedBox(height: 20),
+            _header(context),
+            const SizedBox(height: 22),
             ..._careSection(context),
-            const SizedBox(height: 24),
+            const SizedBox(height: 26),
             ..._notesSection(context),
-            const SizedBox(height: 24),
+            const SizedBox(height: 26),
             ..._photoSection(context),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            Divider(color: context.line),
+            const SizedBox(height: 8),
             ..._dangerSection(context),
           ],
         ),
@@ -38,18 +47,29 @@ class PlantDetailPage extends StatelessWidget {
     );
   }
 
-  // ---------- Header ----------
-  Widget _header() {
+  // Bagian 1: Header Kartu Identitas Tanaman 
+  Widget _header(BuildContext context) {
     final day = DateTime.now().difference(plant.plantedAt).inDays + 1;
     final stageText = plant.stage == PlantStage.semai ? 'Masa semai' : 'Tumbuh';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: plant.category.color,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: context.isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: plant.category.color.withValues(alpha: 0.22),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
       ),
       child: Row(
         children: [
+          // Kotak ikon kategori tanaman
           Container(
             width: 56,
             height: 56,
@@ -60,6 +80,7 @@ class PlantDetailPage extends StatelessWidget {
             child: Icon(plant.category.icon, color: Colors.white, size: 30),
           ),
           const SizedBox(width: 16),
+          // Nama, jenis, dan fase pertumbuhan tanaman
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,31 +93,47 @@ class PlantDetailPage extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
-                  '${plant.type}, ${plant.category.label}',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
+                  '${plant.type} • ${plant.category.label}',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 13,
+                  ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   stageText,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: Colors.white.withValues(alpha: 0.75),
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          Text(
-            'Hari ke-$day',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+          // Badge penanda usia tanam
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Hari ke-$day',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ---------- Perawatan ----------
+  // Bagian 2: Perawatan, Cuaca & Panen
   List<Widget> _careSection(BuildContext context) {
     final rules = plant.rules;
     if (rules == null) {
@@ -106,13 +143,14 @@ class PlantDetailPage extends StatelessWidget {
       ];
     }
 
+    // Jika tanaman masih berada pada tahap semai
     if (plant.stage == PlantStage.semai) {
       return [
-        _title('Masa semai'),
+        _title(context, 'Masa semai'),
         const SizedBox(height: 4),
         Text(
           'Hari ke-${plant.daysInStage + 1} dari ${plant.semaiLength}',
-          style: TextStyle(color: context.muted),
+          style: TextStyle(color: context.muted, fontSize: 13),
         ),
         const SizedBox(height: 12),
         if (plant.semaiReady)
@@ -126,18 +164,22 @@ class PlantDetailPage extends StatelessWidget {
           ),
         _checklist(context, rules.semaiTasks),
         if (!plant.semaiReady)
-          TextButton.icon(
-            onPressed: () => plantStore.startGrowing(plant),
-            icon: const Icon(Icons.fast_forward),
-            label: const Text('Lewati masa semai'),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: TextButton.icon(
+              onPressed: () => plantStore.startGrowing(plant),
+              icon: const Icon(Icons.fast_forward_rounded),
+              label: const Text('Lewati masa semai'),
+            ),
           ),
       ];
     }
 
+    // Jika tanaman sudah masuk tahap tumbuh
     final hasHarvest = rules.harvestMode != HarvestMode.none;
     return [
-      _title(hasHarvest ? 'Perawatan hari ini' : 'Perawatan'),
-      const SizedBox(height: 8),
+      _title(context, hasHarvest ? 'Perawatan hari ini' : 'Perawatan'),
+      const SizedBox(height: 10),
       if (rules.lightNote != null) ...[
         _info(context, Icons.wb_sunny_outlined, rules.lightNote!),
         const SizedBox(height: 12),
@@ -168,41 +210,56 @@ class PlantDetailPage extends StatelessWidget {
           'Mulai sekarang kamu bisa memangkas dan memantau buah. Catat setiap kali memetik.',
         ),
       _checklist(context, rules.tasks),
+
+      // Tombol panen potong / cabut akar
       if (plant.canHarvest || plant.mustPull) ...[
-        const SizedBox(height: 16),
-        _title('Panen'),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+        _title(context, 'Panen'),
+        const SizedBox(height: 10),
         if (!plant.mustPull)
-          ElevatedButton.icon(
-            onPressed: () => plantStore.harvestCut(plant),
-            icon: const Icon(Icons.content_cut),
-            label: Text(
-                'Panen potong (${plant.cutCount + 1} dari ${rules.maxCuts})'),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => plantStore.harvestCut(plant),
+              icon: const Icon(Icons.content_cut),
+              label: Text(
+                  'Panen potong (${plant.cutCount + 1} dari ${rules.maxCuts})'),
+            ),
           ),
         if (!plant.mustPull) const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () => _confirmPull(context),
-          icon: const Icon(Icons.eco),
-          label: const Text('Panen cabut akar'),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _confirmPull(context),
+            icon: const Icon(Icons.eco),
+            label: const Text('Panen cabut akar'),
+          ),
         ),
       ],
+
+      // Tombol catat petik buah (untuk tanaman berbuah)
       if (plant.canPick) ...[
-        const SizedBox(height: 16),
-        _title('Panen'),
+        const SizedBox(height: 20),
+        _title(context, 'Panen'),
         const SizedBox(height: 4),
-        Text('Sudah dipetik ${plant.pickCount} kali',
-            style: TextStyle(color: context.muted)),
-        const SizedBox(height: 8),
-        ElevatedButton.icon(
-          onPressed: () => plantStore.pickFruit(plant),
-          icon: const Icon(Icons.shopping_basket_outlined),
-          label: const Text('Catat petik buah'),
+        Text(
+          'Sudah dipetik ${plant.pickCount} kali',
+          style: TextStyle(color: context.muted, fontSize: 13),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => plantStore.pickFruit(plant),
+            icon: const Icon(Icons.shopping_basket_outlined),
+            label: const Text('Catat petik buah'),
+          ),
         ),
       ],
     ];
   }
 
-  /// Catatan cuaca: hujan menunda penyiraman, panas memicu peringatan.
+  /// Menampilkan saran perawatan otomatis berdasarkan kondisi cuaca hari ini.
   List<Widget> _weatherNotes(BuildContext context) {
     final w = weatherStore.today;
     if (w == null) return [];
@@ -230,33 +287,59 @@ class PlantDetailPage extends StatelessWidget {
     ];
   }
 
+  /// Daftar tugas perawatan yang jatuh tempo hari ini.
   Widget _checklist(BuildContext context, List<RoutineTask> tasks) {
     final visible = tasks
         .where((t) =>
             t.fromDay <= plant.daysInStage &&
             (plant.doneToday(t.kind) || plant.dueNow(t)))
         .toList();
+
     if (visible.isEmpty) {
-      return _info(context, Icons.check_circle_outline, 'Tidak ada tugas hari ini.');
+      return _info(
+          context, Icons.check_circle_outline, 'Tidak ada tugas hari ini.');
     }
+
     return Column(
       children: [
         for (final t in visible)
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            value: plant.doneToday(t.kind),
-            onChanged: plant.doneToday(t.kind)
-                ? null
-                : (_) => plantStore.logCare(plant, t.kind),
-            title: Text(t.label),
-            subtitle: Text(
-                t.everyDays <= 1 ? 'Setiap hari' : 'Setiap ${t.everyDays} hari'),
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: plant.doneToday(t.kind) ? context.tint : context.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: plant.doneToday(t.kind)
+                    ? AppColors.primary.withValues(alpha: 0.3)
+                    : context.line,
+              ),
+            ),
+            child: CheckboxListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: AppColors.primary,
+              value: plant.doneToday(t.kind),
+              onChanged: plant.doneToday(t.kind)
+                  ? null
+                  : (_) => plantStore.logCare(plant, t.kind),
+              title: Text(
+                t.label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: context.ink,
+                ),
+              ),
+              subtitle: Text(
+                t.everyDays <= 1 ? 'Setiap hari' : 'Setiap ${t.everyDays} hari',
+                style: TextStyle(color: context.muted, fontSize: 12),
+              ),
+            ),
           ),
       ],
     );
   }
 
+  /// Konfirmasi sebelum melakukan panen cabut akar
   Future<void> _confirmPull(BuildContext context) async {
     final ok = await _confirm(
       context,
@@ -273,10 +356,10 @@ class PlantDetailPage extends StatelessWidget {
     );
   }
 
-  // ---------- Catatan ----------
+  // Bagian 3: Catatan Perkembangan Tanaman
   List<Widget> _notesSection(BuildContext context) {
     return [
-      _title('Catatan'),
+      _title(context, 'Catatan'),
       const SizedBox(height: 8),
       if (plant.notes.isEmpty)
         Text('Belum ada catatan.', style: TextStyle(color: context.muted)),
@@ -299,6 +382,7 @@ class PlantDetailPage extends StatelessWidget {
     ];
   }
 
+  /// Dialog input catatan baru.
   Future<void> _addNote(BuildContext context) async {
     final controller = TextEditingController();
     final text = await showDialog<String>(
@@ -326,30 +410,40 @@ class PlantDetailPage extends StatelessWidget {
     if (text != null && text.isNotEmpty) plantStore.addNote(plant, text);
   }
 
-  // ---------- Foto ----------
+  // Bagian 4: Galeri Foto Tanaman
   List<Widget> _photoSection(BuildContext context) {
     return [
-      _title('Foto'),
-      const SizedBox(height: 8),
+      _title(context, 'Foto'),
+      const SizedBox(height: 10),
       if (plant.photoPaths.isNotEmpty) ...[
         SizedBox(
-          height: 90,
+          height: 96,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
               for (final path in plant.photoPaths)
                 Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(File(path),
-                        width: 90, height: 90, fit: BoxFit.cover),
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.line),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(13),
+                      child: Image.file(
+                        File(path),
+                        width: 96,
+                        height: 96,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
       ],
       OutlinedButton.icon(
         onPressed: _takePhoto,
@@ -359,6 +453,7 @@ class PlantDetailPage extends StatelessWidget {
     ];
   }
 
+  /// Membuka kamera perangkat untuk mengambil foto kondisi tanaman.
   Future<void> _takePhoto() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.camera,
@@ -368,7 +463,7 @@ class PlantDetailPage extends StatelessWidget {
     if (picked != null) plantStore.addPhoto(plant, picked.path);
   }
 
-  // ---------- Tanaman mati dan uji coba ----------
+  // Bagian 5: Opsi Hapus Tanaman / Uji Coba
   List<Widget> _dangerSection(BuildContext context) {
     return [
       if (kDebugMode)
@@ -388,6 +483,7 @@ class PlantDetailPage extends StatelessWidget {
     ];
   }
 
+  /// Konfirmasi penghapusan data tanaman secara permanen
   Future<void> _confirmDead(BuildContext context) async {
     final ok = await _confirm(
       context,
@@ -400,29 +496,41 @@ class PlantDetailPage extends StatelessWidget {
     Navigator.pop(context);
   }
 
-  // ---------- Komponen kecil ----------
-  Widget _title(String text) => Text(
+  // Komponen UI Pendukung 
+  Widget _title(BuildContext context, String text) => Text(
         text,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: context.ink,
+        ),
       );
 
+  /// Kotak informasi ringan dengan latar lembut sesuai tema.
   Widget _info(BuildContext context, IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.tint,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.line),
       ),
       child: Row(
         children: [
-          Icon(icon, color: context.accent),
+          Icon(icon, color: context.accent, size: 22),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: const TextStyle(height: 1.4))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: context.ink, height: 1.4, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
   }
 
+  /// Kotak peringatan khusus (panen siap, cabut akar, atau peringatan cuaca).
   Widget _alert(
     BuildContext context,
     IconData icon,
@@ -436,25 +544,34 @@ class PlantDetailPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.harvest.withValues(alpha: 0.2),
+        color: AppColors.harvest.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.harvest.withValues(alpha: 0.45)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: context.ink),
+              Icon(icon, color: context.ink, size: 20),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: context.ink,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(text, style: const TextStyle(height: 1.4)),
+          Text(
+            text,
+            style: TextStyle(color: context.ink, height: 1.4, fontSize: 13),
+          ),
           if (action != null && onTap != null) ...[
             const SizedBox(height: 12),
             ElevatedButton(onPressed: onTap, child: Text(action)),
@@ -464,6 +581,7 @@ class PlantDetailPage extends StatelessWidget {
     );
   }
 
+  /// Dialog konfirmasi standar dengan tombol Batal dan aksi utama.
   Future<bool?> _confirm(
       BuildContext context, String title, String text, String okLabel) {
     return showDialog<bool>(
